@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Analyzer — 동료평가 네트워크 분석</title>
+    <meta name="description" content="동료평가 제도의 건전성을 진단하고 평가자 선정 패턴을 분석하는 네트워크 기반 대시보드">
+    <link rel="stylesheet" href="/css/style.css?v=theme_v2">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- ── 사이드바 ── -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon">⚡</div>
+                <div class="sidebar-title-group">
+                    <h1 class="sidebar-title">Network Analyzer</h1>
+                    <p class="sidebar-subtitle">Peer Evaluation Diagnostics</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 연도 선택 -->
+        <div class="filter-section">
+            <label class="filter-label">
+                <span class="filter-label-icon">📅</span> 분석 연도
+            </label>
+            <div class="year-chips" id="year-chips"></div>
+        </div>
+
+        <!-- ORG1 필터 -->
+        <div class="filter-section">
+            <label class="filter-label">
+                <span class="filter-label-icon">🏢</span> 조직 (ORG1)
+            </label>
+            <div class="filter-chips" id="org1-chips"></div>
+        </div>
+
+        <!-- ORG2 필터 (캐스케이드) -->
+        <div class="filter-section">
+            <label class="filter-label">
+                <span class="filter-label-icon">🏠</span> 부서 (ORG2) <span class="cascade-hint" id="cascade-hint"></span>
+            </label>
+            <div class="filter-chips" id="org2-chips"></div>
+        </div>
+
+        <!-- 직군 필터 -->
+        <div class="filter-section">
+            <label class="filter-label">
+                <span class="filter-label-icon">💼</span> 직군
+            </label>
+            <div class="filter-chips" id="job-chips"></div>
+        </div>
+
+        <!-- 직급 필터 -->
+        <div class="filter-section">
+            <label class="filter-label">
+                <span class="filter-label-icon">📊</span> 직급
+            </label>
+            <div class="filter-chips" id="grade-chips"></div>
+        </div>
+
+        <!-- 버튼 영역 -->
+        <div class="sidebar-actions">
+            <button class="btn btn-primary" id="btn-analyze">🔍 분석 실행</button>
+            <button class="btn btn-secondary" id="btn-reset">↻ 필터 초기화</button>
+        </div>
+
+        <!-- 요약 정보 -->
+        <div class="sidebar-summary" id="sidebar-summary" style="display:none">
+            <div class="summary-row">
+                <span>분석 대상 인원</span>
+                <span id="summary-nodes">—</span>
+            </div>
+            <div class="summary-row">
+                <span>평가 관계 수</span>
+                <span id="summary-edges">—</span>
+            </div>
+            <div class="summary-row">
+                <span>외부 연결 (Ghost)</span>
+                <span id="summary-ghosts">—</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── 메인 콘텐츠 ── -->
+    <main class="main-content">
+        <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
+
+        <!-- ── 상단 헤더 ── -->
+        <header class="top-header" id="top-header">
+            <div class="header-left">
+                <div class="header-title-group">
+                    <div class="header-service-name">Network Analyzer</div>
+                    <div class="header-description">동료평가 평가자 선정 네트워크 구조를 분석하여 제도 건전성을 진단합니다</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <span class="header-badge">
+                    <span class="header-badge-dot"></span>
+                    평가자 선정 진단 시스템
+                </span>
+            </div>
+        </header>
+
+        <!-- 탭 네비게이션 (헤더 아래 고정) -->
+        <nav class="tab-nav" id="tab-nav" style="display:none">
+            <button class="tab-btn active" data-tab="tab-org">📊 조직 진단</button>
+            <button class="tab-btn" data-tab="tab-individual">👤 개인 패턴</button>
+            <button class="tab-btn" data-tab="tab-feedback">📝 피드백 분석</button>
+            <button class="tab-btn" data-tab="tab-network">🌐 네트워크 맵</button>
+        </nav>
+
+        <!-- 면책 문구 (탭 아래 고정) -->
+        <div class="disclaimer" id="disclaimer" style="display:none">
+            ⚠️ 본 데이터는 동료평가 <strong>제도 진단</strong> 목적이며, 인사 평가에 직접 활용할 수 없습니다.
+        </div>
+
+        <!-- 초기 안내 -->
+        <div class="content-area">
+            <div class="placeholder" id="placeholder">
+                <div class="placeholder-visual">
+                    <div class="placeholder-icon">🔬</div>
+                </div>
+                <h2>동료평가 제도 건전성 진단 도구</h2>
+                <p>좌측 패널에서 분석할 <strong>연도</strong>와 <strong>조직</strong>을 선택한 후, <strong>분석 실행</strong> 버튼을 클릭하세요.</p>
+                <p class="placeholder-hint">💡 ORG1을 먼저 선택하면 하위 필터(ORG2·직군·직급)가 자동으로 연동됩니다.</p>
+            </div>
+
+            <!-- 로딩 -->
+            <div class="loading" id="loading" style="display:none">
+                <div class="spinner"></div>
+                <p>분석 중입니다...</p>
+            </div>
+        </div>
+
+        <!-- 결과 영역 -->
+        <div class="results" id="results" style="display:none">
+
+            <!-- 분석 결과 탭 내용 시작 -->
+
+            <!-- ▸ 탭1: 조직 진단 -->
+            <div class="tab-content active" id="tab-org">
+                <div class="kpi-grid" id="kpi-grid"></div>
+
+                <h3 class="section-title">📋 하위 조직 비교</h3>
+                <div class="subgroup-controls">
+                    <label><input type="radio" name="subgroup-level" value="ORG1_OP" checked> ORG1 기준</label>
+                    <label><input type="radio" name="subgroup-level" value="ORG2_OP"> ORG2 기준</label>
+                </div>
+                <div class="table-container" id="subgroup-table"></div>
+            </div>
+
+            <!-- ▸ 탭2: 개인 패턴 -->
+            <div class="tab-content" id="tab-individual">
+                <nav class="metric-tabs" id="metric-tabs">
+                    <button class="metric-tab-btn active" data-metric="selection_burden">⚡ 평가 부담 집중</button>
+                    <button class="metric-tab-btn" data-metric="cross_org_rate">🔀 크로스-조직률</button>
+                    <button class="metric-tab-btn" data-metric="mutual_selection">🤝 상호 선정률</button>
+                    <button class="metric-tab-btn" data-metric="group_closure">🔒 그룹 폐쇄성</button>
+                </nav>
+                <div class="metric-description" id="metric-description"></div>
+                <div class="table-container" id="individual-table"></div>
+            </div>
+
+            <!-- ▸ 탭3: 피드백 분석 -->
+            <div class="tab-content" id="tab-feedback">
+                <div class="kpi-grid" id="feedback-kpi-grid"></div>
+
+                <h3 class="section-title">📋 개인별 피드백 품질 (피드백 짧은 순)</h3>
+                <p class="section-hint">평가 부담 상위자의 피드백 길이가 짧아지는 패턴을 확인하세요.</p>
+                <div class="table-container" id="feedback-individual-table"></div>
+
+                <h3 class="section-title">🚨 담합 의심 플래그</h3>
+                <p class="section-hint">상호선정률 高 + 피드백 짧음 + 보완점 기피가 동시에 감지된 경우입니다.</p>
+                <div class="table-container" id="collusion-table"></div>
+            </div>
+
+            <!-- ▸ 탭4: 네트워크 맵 -->
+            <div class="tab-content" id="tab-network">
+                <div class="network-legend" id="network-legend"></div>
+                <div class="network-container" id="network-container"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://unpkg.com/vis-network@9.1.6/standalone/umd/vis-network.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/filters.js"></script>
+    <script src="/js/metrics-display.js"></script>
+    <script src="/js/network-graph.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>
